@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import { hasVoted, submitResponse } from "@/lib/surveys";
+import { getOrCreateVoterToken } from "@/lib/voter";
+import type { AnswerInput } from "@/lib/types";
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  let body: { answers?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
+  }
+
+  if (!Array.isArray(body.answers)) {
+    return NextResponse.json({ error: "Ungültige Antworten." }, { status: 400 });
+  }
+
+  const answers: AnswerInput[] = [];
+  for (const raw of body.answers) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.questionId !== "string") continue;
+    const value = r.value as AnswerInput["value"];
+    answers.push({ questionId: r.questionId, value });
+  }
+
+  const { token } = await getOrCreateVoterToken(id);
+
+  if (hasVoted(id, token)) {
+    return NextResponse.json(
+      { error: "Du hast an dieser Umfrage bereits teilgenommen." },
+      { status: 409 }
+    );
+  }
+
+  const result = submitResponse(id, token, answers);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
