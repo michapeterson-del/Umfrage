@@ -1,18 +1,36 @@
-import Database from "better-sqlite3";
-import path from "node:path";
-import fs from "node:fs";
+import { Pool } from "pg";
 
-const globalForDb = globalThis as unknown as { __umfrageDb?: Database.Database };
+const globalForDb = globalThis as unknown as {
+  __umfragePool?: Pool;
+  __umfrageSchemaReady?: Promise<void>;
+};
 
-function createDb() {
-  const dataDir = path.join(process.cwd(), "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+function createPool(): Pool {
+  const connectionString =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
+
+  if (!connectionString) {
+    throw new Error(
+      "Keine Datenbankverbindung konfiguriert. Bitte POSTGRES_URL (oder DATABASE_URL) setzen — " +
+        "z.B. durch Verknüpfen einer Vercel Postgres/Neon-Datenbank mit dem Projekt."
+    );
   }
 
-  const instance = new Database(path.join(dataDir, "umfrage.db"));
-  instance.pragma("journal_mode = WAL");
-  instance.exec(`
+  return new Pool({ connectionString });
+}
+
+function getPool(): Pool {
+  if (!globalForDb.__umfragePool) {
+    globalForDb.__umfragePool = createPool();
+  }
+  return globalForDb.__umfragePool;
+}
+
+async function createSchema(): Promise<void> {
+  const pool = getPool();
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS surveys (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -28,7 +46,7 @@ function createDb() {
       type TEXT NOT NULL,
       text TEXT NOT NULL,
       options TEXT,
-      required INTEGER NOT NULL DEFAULT 1
+      required BOOLEAN NOT NULL DEFAULT TRUE
     );
 
     CREATE TABLE IF NOT EXISTS responses (
@@ -50,25 +68,47 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS idx_answers_response ON answers(response_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_survey_voter ON responses(survey_id, voter_token);
   `);
-  return instance;
 }
 
-// Lazily opened on first real use (not at module import time): Next.js imports
-// route modules during `next build` just to collect metadata, without ever
-// calling the handlers. Opening the sqlite file eagerly at import time made
-// several build workers race to open/migrate the same file concurrently and
-// fail with "database is locked".
-function ensureDb(): Database.Database {
-  if (!globalForDb.__umfrageDb) {
-    globalForDb.__umfrageDb = createDb();
+// Schema creation is deferred to first real use (not at module import time):
+// Next.js imports route modules during `next build` just to collect metadata,
+// without ever calling the handlers — opening a DB connection at that point
+// would fail in environments without a database configured at build time.
+function ensureSchema(): Promise<void> {
+  if (!globalForDb.__umfrageSchemaReady) {
+    globalForDb.__umfrageSchemaReady = createSchema();
   }
-  return globalForDb.__umfrageDb;
+  return globalForDb.__umfrageSchemaReady;
 }
 
-export const db: Database.Database = new Proxy({} as Database.Database, {
-  get(_target, prop) {
-    const instance = ensureDb();
-    const value = Reflect.get(instance, prop, instance);
-    return typeof value === "function" ? value.bind(instance) : value;
-  },
-});
+export async function query<T = Record<string, unknown>>(
+  text: string,
+  params: unknown[] = []
+): Promise<T[]> {
+  await ensureSchema();
+  const result = await getPool().query(text, params);
+  return result.rows as T[];
+}
+
+export async function withTransaction<T>(fn: (tx: TransactionClient) => Promise<T>): Promise<T> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const tx: TransactionClient = {
+      query: (text, params = []) => client.query(text, params).then((r) => r.rows),
+    };
+    const result = await fn(tx);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export interface TransactionClient {
+  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
+}

@@ -64,6 +64,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  const { id, adminToken } = createSurvey(result.draft);
+  const { id, adminToken } = await createSurvey(result.draft);
   return NextResponse.json({ id, adminToken });
 }

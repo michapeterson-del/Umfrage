@@ -8,11 +8,11 @@ export async function GET(
   const { id } = await params;
   const token = new URL(request.url).searchParams.get("token") ?? "";
 
-  if (!token || !isValidAdminToken(id, token)) {
+  if (!token || !(await isValidAdminToken(id, token))) {
     return NextResponse.json({ error: "Kein Zugriff." }, { status: 403 });
   }
 
-  const results = getResults(id);
+  const results = await getResults(id);
   if (!results) {
     return NextResponse.json({ error: "Umfrage nicht gefunden." }, { status: 404 });
   }

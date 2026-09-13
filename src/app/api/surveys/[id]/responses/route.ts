@@ -31,14 +31,14 @@ export async function POST(
 
   const { token } = await getOrCreateVoterToken(id);
 
-  if (hasVoted(id, token)) {
+  if (await hasVoted(id, token)) {
     return NextResponse.json(
       { error: "Du hast an dieser Umfrage bereits teilgenommen." },
       { status: 409 }
     );
   }
 
-  const result = submitResponse(id, token, answers);
+  const result = await submitResponse(id, token, answers);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

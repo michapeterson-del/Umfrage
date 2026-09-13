@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { db } from "./db";
+import { query, withTransaction } from "./db";
 import type {
   AnswerInput,
   Question,
@@ -24,7 +24,7 @@ interface QuestionRow {
   type: string;
   text: string;
   options: string | null;
-  required: number;
+  required: boolean;
 }
 
 function rowToQuestion(row: QuestionRow): Question {
@@ -38,46 +38,43 @@ function rowToQuestion(row: QuestionRow): Question {
   };
 }
 
-export function createSurvey(draft: SurveyDraft): { id: string; adminToken: string } {
+export async function createSurvey(draft: SurveyDraft): Promise<{ id: string; adminToken: string }> {
   const id = newId();
   const adminToken = newToken();
   const createdAt = new Date().toISOString();
 
-  const insertSurvey = db.prepare(
-    `INSERT INTO surveys (id, title, description, admin_token, created_at) VALUES (?, ?, ?, ?, ?)`
-  );
-  const insertQuestion = db.prepare(
-    `INSERT INTO questions (id, survey_id, position, type, text, options, required) VALUES (?, ?, ?, ?, ?, ?, ?)`
-  );
-
-  const tx = db.transaction(() => {
-    insertSurvey.run(id, draft.title, draft.description ?? "", adminToken, createdAt);
-    draft.questions.forEach((q, index) => {
-      insertQuestion.run(
-        newId(),
-        id,
-        index,
-        q.type,
-        q.text,
-        q.options ? JSON.stringify(q.options) : null,
-        q.required ? 1 : 0
+  await withTransaction(async (tx) => {
+    await tx.query(
+      `INSERT INTO surveys (id, title, description, admin_token, created_at) VALUES ($1, $2, $3, $4, $5)`,
+      [id, draft.title, draft.description ?? "", adminToken, createdAt]
+    );
+    let position = 0;
+    for (const q of draft.questions) {
+      await tx.query(
+        `INSERT INTO questions (id, survey_id, position, type, text, options, required) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [newId(), id, position, q.type, q.text, q.options ? JSON.stringify(q.options) : null, q.required]
       );
-    });
+      position += 1;
+    }
   });
-  tx();
 
   return { id, adminToken };
 }
 
-export function getSurvey(id: string): Survey | null {
-  const surveyRow = db
-    .prepare(`SELECT id, title, description, created_at FROM surveys WHERE id = ?`)
-    .get(id) as { id: string; title: string; description: string; created_at: string } | undefined;
+export async function getSurvey(id: string): Promise<Survey | null> {
+  const surveyRows = await query<{
+    id: string;
+    title: string;
+    description: string;
+    created_at: string;
+  }>(`SELECT id, title, description, created_at FROM surveys WHERE id = $1`, [id]);
+  const surveyRow = surveyRows[0];
   if (!surveyRow) return null;
 
-  const questionRows = db
-    .prepare(`SELECT * FROM questions WHERE survey_id = ? ORDER BY position ASC`)
-    .all(id) as QuestionRow[];
+  const questionRows = await query<QuestionRow>(
+    `SELECT * FROM questions WHERE survey_id = $1 ORDER BY position ASC`,
+    [id]
+  );
 
   return {
     id: surveyRow.id,
@@ -88,34 +85,25 @@ export function getSurvey(id: string): Survey | null {
   };
 }
 
-export function getSurveyByAdminToken(id: string, adminToken: string): Survey | null {
-  const row = db
-    .prepare(`SELECT id FROM surveys WHERE id = ? AND admin_token = ?`)
-    .get(id, adminToken) as { id: string } | undefined;
-  if (!row) return null;
-  return getSurvey(id);
+export async function isValidAdminToken(id: string, adminToken: string): Promise<boolean> {
+  const rows = await query(`SELECT id FROM surveys WHERE id = $1 AND admin_token = $2`, [id, adminToken]);
+  return rows.length > 0;
 }
 
-export function isValidAdminToken(id: string, adminToken: string): boolean {
-  const row = db
-    .prepare(`SELECT id FROM surveys WHERE id = ? AND admin_token = ?`)
-    .get(id, adminToken);
-  return !!row;
+export async function hasVoted(surveyId: string, voterToken: string): Promise<boolean> {
+  const rows = await query(`SELECT id FROM responses WHERE survey_id = $1 AND voter_token = $2`, [
+    surveyId,
+    voterToken,
+  ]);
+  return rows.length > 0;
 }
 
-export function hasVoted(surveyId: string, voterToken: string): boolean {
-  const row = db
-    .prepare(`SELECT id FROM responses WHERE survey_id = ? AND voter_token = ?`)
-    .get(surveyId, voterToken);
-  return !!row;
-}
-
-export function submitResponse(
+export async function submitResponse(
   surveyId: string,
   voterToken: string,
   answers: AnswerInput[]
-): { ok: true } | { ok: false; error: string } {
-  const survey = getSurvey(surveyId);
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const survey = await getSurvey(surveyId);
   if (!survey) return { ok: false, error: "Umfrage nicht gefunden." };
 
   const questionById = new Map(survey.questions.map((q) => [q.id, q]));
@@ -134,47 +122,52 @@ export function submitResponse(
   }
 
   const responseId = newId();
-  const insertResponse = db.prepare(
-    `INSERT INTO responses (id, survey_id, created_at, voter_token) VALUES (?, ?, ?, ?)`
-  );
-  const insertAnswer = db.prepare(
-    `INSERT INTO answers (id, response_id, question_id, value) VALUES (?, ?, ?, ?)`
-  );
 
   try {
-    const tx = db.transaction(() => {
-      insertResponse.run(responseId, surveyId, new Date().toISOString(), voterToken);
+    await withTransaction(async (tx) => {
+      await tx.query(`INSERT INTO responses (id, survey_id, created_at, voter_token) VALUES ($1, $2, $3, $4)`, [
+        responseId,
+        surveyId,
+        new Date().toISOString(),
+        voterToken,
+      ]);
       for (const a of answers) {
         if (!questionById.has(a.questionId)) continue;
-        insertAnswer.run(newId(), responseId, a.questionId, JSON.stringify(a.value));
+        await tx.query(`INSERT INTO answers (id, response_id, question_id, value) VALUES ($1, $2, $3, $4)`, [
+          newId(),
+          responseId,
+          a.questionId,
+          JSON.stringify(a.value),
+        ]);
       }
     });
-    tx();
-  } catch {
-    return { ok: false, error: "Du hast an dieser Umfrage bereits teilgenommen." };
+  } catch (err) {
+    const code = (err as { code?: string } | undefined)?.code;
+    if (code === "23505") {
+      return { ok: false, error: "Du hast an dieser Umfrage bereits teilgenommen." };
+    }
+    throw err;
   }
 
   return { ok: true };
 }
 
-export function getResults(surveyId: string): SurveyResults | null {
-  const survey = getSurvey(surveyId);
+export async function getResults(surveyId: string): Promise<SurveyResults | null> {
+  const survey = await getSurvey(surveyId);
   if (!survey) return null;
 
-  const totalResponses = (
-    db.prepare(`SELECT COUNT(*) as c FROM responses WHERE survey_id = ?`).get(surveyId) as {
-      c: number;
-    }
-  ).c;
+  const countRows = await query<{ c: string }>(`SELECT COUNT(*) as c FROM responses WHERE survey_id = $1`, [
+    surveyId,
+  ]);
+  const totalResponses = Number(countRows[0]?.c ?? 0);
 
-  const answerRows = db
-    .prepare(
-      `SELECT a.question_id as question_id, a.value as value
-       FROM answers a
-       JOIN responses r ON r.id = a.response_id
-       WHERE r.survey_id = ?`
-    )
-    .all(surveyId) as { question_id: string; value: string }[];
+  const answerRows = await query<{ question_id: string; value: string }>(
+    `SELECT a.question_id as question_id, a.value as value
+     FROM answers a
+     JOIN responses r ON r.id = a.response_id
+     WHERE r.survey_id = $1`,
+    [surveyId]
+  );
 
   const answersByQuestion = new Map<string, string[]>();
   for (const row of answerRows) {
@@ -237,19 +230,21 @@ export function getResults(surveyId: string): SurveyResults | null {
   return { survey, totalResponses, questionResults };
 }
 
-export function getRawResponses(surveyId: string) {
-  const survey = getSurvey(surveyId);
+export async function getRawResponses(surveyId: string) {
+  const survey = await getSurvey(surveyId);
   if (!survey) return null;
 
-  const responseRows = db
-    .prepare(`SELECT id, created_at FROM responses WHERE survey_id = ? ORDER BY created_at ASC`)
-    .all(surveyId) as { id: string; created_at: string }[];
+  const responseRows = await query<{ id: string; created_at: string }>(
+    `SELECT id, created_at FROM responses WHERE survey_id = $1 ORDER BY created_at ASC`,
+    [surveyId]
+  );
 
-  const answerRows = db
-    .prepare(`SELECT response_id, question_id, value FROM answers WHERE response_id IN (
-      SELECT id FROM responses WHERE survey_id = ?
-    )`)
-    .all(surveyId) as { response_id: string; question_id: string; value: string }[];
+  const answerRows = await query<{ response_id: string; question_id: string; value: string }>(
+    `SELECT response_id, question_id, value FROM answers WHERE response_id IN (
+      SELECT id FROM responses WHERE survey_id = $1
+    )`,
+    [surveyId]
+  );
 
   const answersByResponse = new Map<string, Map<string, unknown>>();
   for (const row of answerRows) {

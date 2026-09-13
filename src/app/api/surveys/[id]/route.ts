@@ -7,13 +7,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const survey = getSurvey(id);
+  const survey = await getSurvey(id);
   if (!survey) {
     return NextResponse.json({ error: "Umfrage nicht gefunden." }, { status: 404 });
   }
 
   const { token } = await getOrCreateVoterToken(id);
-  const voted = hasVoted(id, token);
+  const voted = await hasVoted(id, token);
 
   return NextResponse.json({ survey, voted });
 }

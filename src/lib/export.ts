@@ -10,8 +10,8 @@ function answerToText(value: unknown): string {
 }
 
 export async function buildXlsx(surveyId: string): Promise<Buffer | null> {
-  const results = getResults(surveyId);
-  const raw = getRawResponses(surveyId);
+  const results = await getResults(surveyId);
+  const raw = await getRawResponses(surveyId);
   if (!results || !raw) return null;
 
   const workbook = new ExcelJS.Workbook();
@@ -92,7 +92,7 @@ export async function buildXlsx(surveyId: string): Promise<Buffer | null> {
 }
 
 export async function buildPdf(surveyId: string): Promise<Buffer | null> {
-  const results = getResults(surveyId);
+  const results = await getResults(surveyId);
   if (!results) return null;
 
   return new Promise((resolve, reject) => {
