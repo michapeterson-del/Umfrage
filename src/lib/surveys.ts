@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { customAlphabet } from "nanoid";
 import { query, withTransaction } from "./db";
 import type {
   AnswerInput,
@@ -16,6 +17,11 @@ function newId() {
 function newToken() {
   return randomUUID().replace(/-/g, "");
 }
+
+// Short, easy-to-read/share id for the public survey link — lowercase
+// letters and digits only, excluding visually ambiguous characters
+// (0/o, 1/l/i). Not a secret, just needs to look nice in a shared link.
+const generateSurveyId = customAlphabet("23456789abcdefghjkmnpqrstuvwxyz", 8);
 
 interface QuestionRow {
   id: string;
@@ -39,26 +45,36 @@ function rowToQuestion(row: QuestionRow): Question {
 }
 
 export async function createSurvey(draft: SurveyDraft): Promise<{ id: string; adminToken: string }> {
-  const id = newId();
   const adminToken = newToken();
   const createdAt = new Date().toISOString();
 
-  await withTransaction(async (tx) => {
-    await tx.query(
-      `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true]
-    );
-    let position = 0;
-    for (const q of draft.questions) {
-      await tx.query(
-        `INSERT INTO questions (id, survey_id, position, type, text, options, required) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [newId(), id, position, q.type, q.text, q.options ? JSON.stringify(q.options) : null, q.required]
-      );
-      position += 1;
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const id = generateSurveyId();
+    try {
+      await withTransaction(async (tx) => {
+        await tx.query(
+          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true]
+        );
+        let position = 0;
+        for (const q of draft.questions) {
+          await tx.query(
+            `INSERT INTO questions (id, survey_id, position, type, text, options, required) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [newId(), id, position, q.type, q.text, q.options ? JSON.stringify(q.options) : null, q.required]
+          );
+          position += 1;
+        }
+      });
+      return { id, adminToken };
+    } catch (err) {
+      const code = (err as { code?: string } | undefined)?.code;
+      // 23505 = unique_violation: extremely unlikely id collision — retry with a fresh id.
+      if (code === "23505" && attempt < maxAttempts) continue;
+      throw err;
     }
-  });
-
-  return { id, adminToken };
+  }
+  throw new Error("Umfrage konnte nicht erstellt werden (ID-Kollision).");
 }
 
 export async function getSurvey(id: string): Promise<Survey | null> {
