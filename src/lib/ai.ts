@@ -97,6 +97,7 @@ function heuristicFallback(input: string): SurveyDraft {
   return {
     title: "Neue Umfrage",
     description: "",
+    collectName: false,
     questions,
   };
 }
@@ -137,6 +138,7 @@ function normalizeDraft(raw: {
   return {
     title: (raw.title ?? "Neue Umfrage").trim() || "Neue Umfrage",
     description: (raw.description ?? "").trim(),
+    collectName: false,
     questions: questions.length > 0 ? questions : heuristicFallback(raw.title ?? "").questions,
   };
 }

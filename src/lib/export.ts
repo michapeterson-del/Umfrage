@@ -73,6 +73,7 @@ export async function buildXlsx(surveyId: string): Promise<Buffer | null> {
   }));
   rawSheet.columns = [
     { header: "Eingegangen am", key: "createdAt", width: 22 },
+    ...(results.survey.collectName ? [{ header: "Name", key: "voterName", width: 22 }] : []),
     ...questionColumns,
   ];
   rawSheet.getRow(1).font = { bold: true };
@@ -80,6 +81,7 @@ export async function buildXlsx(surveyId: string): Promise<Buffer | null> {
   for (const row of raw.rows) {
     const rowData: Record<string, string> = {
       createdAt: new Date(row.createdAt).toLocaleString("de-DE"),
+      voterName: row.voterName ?? "",
     };
     for (const q of results.survey.questions) {
       rowData[q.id] = answerToText(row.answers.get(q.id));

@@ -10,6 +10,7 @@ export interface QuestionDraft {
 export interface SurveyDraft {
   title: string;
   description: string;
+  collectName: boolean;
   questions: QuestionDraft[];
 }
 
@@ -22,6 +23,7 @@ export interface Survey {
   id: string;
   title: string;
   description: string;
+  collectName: boolean;
   createdAt: string;
   questions: Question[];
 }

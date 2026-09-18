@@ -11,6 +11,7 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -76,7 +77,7 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
       const res = await fetch(`/api/surveys/${surveyId}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: payload }),
+        body: JSON.stringify({ answers: payload, name: survey.collectName ? name : undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -125,6 +126,20 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {survey.collectName && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <label htmlFor="voter-name" className="text-sm font-medium text-slate-800">
+              Name <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <input
+              id="voter-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Dein Name"
+              className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+        )}
         {survey.questions.map((q) => (
           <QuestionField
             key={q.id}

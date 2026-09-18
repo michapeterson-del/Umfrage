@@ -48,7 +48,9 @@ function validateDraft(body: unknown): { draft: SurveyDraft } | { error: string 
     });
   }
 
-  return { draft: { title, description, questions } };
+  const collectName = b.collectName === true;
+
+  return { draft: { title, description, collectName, questions } };
 }
 
 export async function POST(request: Request) {

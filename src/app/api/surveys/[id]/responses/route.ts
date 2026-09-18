@@ -9,7 +9,7 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  let body: { answers?: unknown };
+  let body: { answers?: unknown; name?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -19,6 +19,8 @@ export async function POST(
   if (!Array.isArray(body.answers)) {
     return NextResponse.json({ error: "Ungültige Antworten." }, { status: 400 });
   }
+
+  const voterName = typeof body.name === "string" ? body.name.trim().slice(0, 200) : undefined;
 
   const answers: AnswerInput[] = [];
   for (const raw of body.answers) {
@@ -38,7 +40,7 @@ export async function POST(
     );
   }
 
-  const result = await submitResponse(id, token, answers);
+  const result = await submitResponse(id, token, answers, voterName);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

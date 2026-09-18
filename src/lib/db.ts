@@ -36,7 +36,8 @@ async function createSchema(): Promise<void> {
       title TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       admin_token TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      collect_name BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS questions (
@@ -53,7 +54,8 @@ async function createSchema(): Promise<void> {
       id TEXT PRIMARY KEY,
       survey_id TEXT NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
       created_at TEXT NOT NULL,
-      voter_token TEXT NOT NULL
+      voter_token TEXT NOT NULL,
+      voter_name TEXT
     );
 
     CREATE TABLE IF NOT EXISTS answers (
@@ -67,6 +69,12 @@ async function createSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_responses_survey ON responses(survey_id);
     CREATE INDEX IF NOT EXISTS idx_answers_response ON answers(response_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_survey_voter ON responses(survey_id, voter_token);
+
+    -- Migrations for columns added after the initial deployment: CREATE TABLE
+    -- above only applies to a brand-new database, so already-existing tables
+    -- need these added explicitly.
+    ALTER TABLE surveys ADD COLUMN IF NOT EXISTS collect_name BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE responses ADD COLUMN IF NOT EXISTS voter_name TEXT;
   `);
 }
 

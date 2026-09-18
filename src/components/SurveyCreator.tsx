@@ -400,6 +400,21 @@ export default function SurveyCreator() {
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
+            <label className="flex items-start gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={draft.collectName}
+                onChange={(e) => setDraft({ ...draft, collectName: e.target.checked })}
+                className="mt-0.5"
+              />
+              <span>
+                Namen der Teilnehmenden abfragen
+                <span className="block text-xs text-slate-400">
+                  Falls aktiviert, wird beim Abstimmen nach dem Namen gefragt — die Angabe bleibt für
+                  Teilnehmende trotzdem freiwillig, die Umfrage bleibt anonym nutzbar.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div className="space-y-3">

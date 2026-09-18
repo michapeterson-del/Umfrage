@@ -45,8 +45,8 @@ export async function createSurvey(draft: SurveyDraft): Promise<{ id: string; ad
 
   await withTransaction(async (tx) => {
     await tx.query(
-      `INSERT INTO surveys (id, title, description, admin_token, created_at) VALUES ($1, $2, $3, $4, $5)`,
-      [id, draft.title, draft.description ?? "", adminToken, createdAt]
+      `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true]
     );
     let position = 0;
     for (const q of draft.questions) {
@@ -67,7 +67,8 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     title: string;
     description: string;
     created_at: string;
-  }>(`SELECT id, title, description, created_at FROM surveys WHERE id = $1`, [id]);
+    collect_name: boolean;
+  }>(`SELECT id, title, description, created_at, collect_name FROM surveys WHERE id = $1`, [id]);
   const surveyRow = surveyRows[0];
   if (!surveyRow) return null;
 
@@ -80,6 +81,7 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     id: surveyRow.id,
     title: surveyRow.title,
     description: surveyRow.description,
+    collectName: !!surveyRow.collect_name,
     createdAt: surveyRow.created_at,
     questions: questionRows.map(rowToQuestion),
   };
@@ -101,7 +103,8 @@ export async function hasVoted(surveyId: string, voterToken: string): Promise<bo
 export async function submitResponse(
   surveyId: string,
   voterToken: string,
-  answers: AnswerInput[]
+  answers: AnswerInput[],
+  voterName?: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const survey = await getSurvey(surveyId);
   if (!survey) return { ok: false, error: "Umfrage nicht gefunden." };
@@ -125,12 +128,10 @@ export async function submitResponse(
 
   try {
     await withTransaction(async (tx) => {
-      await tx.query(`INSERT INTO responses (id, survey_id, created_at, voter_token) VALUES ($1, $2, $3, $4)`, [
-        responseId,
-        surveyId,
-        new Date().toISOString(),
-        voterToken,
-      ]);
+      await tx.query(
+        `INSERT INTO responses (id, survey_id, created_at, voter_token, voter_name) VALUES ($1, $2, $3, $4, $5)`,
+        [responseId, surveyId, new Date().toISOString(), voterToken, voterName?.trim() || null]
+      );
       for (const a of answers) {
         if (!questionById.has(a.questionId)) continue;
         await tx.query(`INSERT INTO answers (id, response_id, question_id, value) VALUES ($1, $2, $3, $4)`, [
@@ -234,8 +235,8 @@ export async function getRawResponses(surveyId: string) {
   const survey = await getSurvey(surveyId);
   if (!survey) return null;
 
-  const responseRows = await query<{ id: string; created_at: string }>(
-    `SELECT id, created_at FROM responses WHERE survey_id = $1 ORDER BY created_at ASC`,
+  const responseRows = await query<{ id: string; created_at: string; voter_name: string | null }>(
+    `SELECT id, created_at, voter_name FROM responses WHERE survey_id = $1 ORDER BY created_at ASC`,
     [surveyId]
   );
 
@@ -256,6 +257,7 @@ export async function getRawResponses(surveyId: string) {
   const rows = responseRows.map((r) => ({
     id: r.id,
     createdAt: r.created_at,
+    voterName: r.voter_name,
     answers: answersByResponse.get(r.id) ?? new Map<string, unknown>(),
   }));
 
