@@ -43,6 +43,18 @@ function emptyQuestion(): QuestionDraft {
   return { type: "text", text: "", required: true };
 }
 
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 function CopyField({ label, value, hint }: { label: string; value: string; hint?: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -322,13 +334,32 @@ export default function SurveyCreator() {
             hint="Nur mit diesem Link siehst du die Auswertung und kannst Excel/PDF herunterladen."
           />
         </div>
-        <div className="flex gap-3">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Diese Links werden nur in diesem Browser gespeichert. Damit du sie nicht verlierst (z. B. bei
+          neuem Gerät oder gelöschten Browserdaten), lade sie dir jetzt als Datei herunter und bewahre sie
+          irgendwo sicher auf (z. B. per Mail an dich selbst oder in deinen Notizen).
+        </div>
+        <div className="flex flex-wrap gap-3">
           <a
             href={resultsLink}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             Zu den Ergebnissen
           </a>
+          <button
+            type="button"
+            onClick={() =>
+              downloadTextFile(
+                `umfrage-links-${published.id}.txt`,
+                `Umfrage: ${draft?.title ?? ""}\n\n` +
+                  `Umfrage-Link (zum Teilen):\n${voteLink}\n\n` +
+                  `Ergebnis-Link (privat, nicht teilen!):\n${resultsLink}\n`
+              )
+            }
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Links als Textdatei sichern
+          </button>
           <button
             type="button"
             onClick={resetAll}
@@ -459,7 +490,29 @@ export default function SurveyCreator() {
 
       {savedSurveys.length > 0 && !draft && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-700">Meine Umfragen (auf diesem Gerät)</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-slate-700">Meine Umfragen (auf diesem Gerät)</h2>
+            <button
+              type="button"
+              onClick={() =>
+                downloadTextFile(
+                  "meine-umfragen.txt",
+                  savedSurveys
+                    .map(
+                      (s) =>
+                        `Umfrage: ${s.title}\n` +
+                        `Erstellt am: ${new Date(s.createdAt).toLocaleDateString("de-DE")}\n` +
+                        `Umfrage-Link (zum Teilen):\n${origin}/u/${s.id}\n` +
+                        `Ergebnis-Link (privat, nicht teilen!):\n${origin}/u/${s.id}/ergebnisse?token=${s.adminToken}\n`
+                    )
+                    .join("\n---\n\n")
+                )
+              }
+              className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              Alle als Textdatei sichern
+            </button>
+          </div>
           <ul className="mt-3 divide-y divide-slate-100">
             {savedSurveys.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-3 py-2">
