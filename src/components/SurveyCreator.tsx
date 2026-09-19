@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import type { QuestionDraft, QuestionType, SurveyDraft } from "@/lib/types";
 import {
   getOrCreateCreatorId,
@@ -441,25 +442,30 @@ export default function SurveyCreator() {
                 sehen — bleibt für alle fest, niemand kann das ändern.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {Object.values(THEMES).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setDraft({ ...draft, theme: t.id })}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                      draft.theme === t.id
-                        ? "border-slate-800 bg-slate-800 text-white"
-                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: t.accent }}
-                      aria-hidden
-                    />
-                    {t.label}
-                  </button>
-                ))}
+                {Object.values(THEMES).map((t) => {
+                  const selected = draft.theme === t.id;
+                  const bgClass = t.headerBg === "dark" ? "bg-black" : "bg-white";
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setDraft({ ...draft, theme: t.id })}
+                      className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 ${bgClass} ${
+                        selected ? "border-slate-800" : "border-transparent hover:border-slate-300"
+                      }`}
+                      aria-label={t.label}
+                      title={t.label}
+                    >
+                      <Image
+                        src={t.logo.src}
+                        alt={t.logo.alt}
+                        width={100}
+                        height={28}
+                        className={t.logo.className}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

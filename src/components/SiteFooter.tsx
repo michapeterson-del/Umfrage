@@ -6,6 +6,7 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-4xl px-4 py-6 text-center">
         <p className="text-xs font-medium text-slate-400">Teil der tepto-Familie</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
+          <Image src="/logos/tepto.png" alt="tepto" width={92} height={30} className="h-6 w-auto" />
           <Image
             src="/logos/tepto-kitsolar.png"
             alt="kitSolar by tepto"
