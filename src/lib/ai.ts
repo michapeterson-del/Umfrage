@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { QuestionType, SurveyDraft } from "./types";
+import { DEFAULT_THEME } from "./themes";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
@@ -98,6 +99,7 @@ function heuristicFallback(input: string): SurveyDraft {
     title: "Neue Umfrage",
     description: "",
     collectName: false,
+    theme: DEFAULT_THEME,
     questions,
   };
 }
@@ -139,6 +141,7 @@ function normalizeDraft(raw: {
     title: (raw.title ?? "Neue Umfrage").trim() || "Neue Umfrage",
     description: (raw.description ?? "").trim(),
     collectName: false,
+    theme: DEFAULT_THEME,
     questions: questions.length > 0 ? questions : heuristicFallback(raw.title ?? "").questions,
   };
 }

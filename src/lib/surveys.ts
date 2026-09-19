@@ -9,6 +9,7 @@ import type {
   SurveyDraft,
   SurveyResults,
 } from "./types";
+import { DEFAULT_THEME, type ThemeId } from "./themes";
 
 function newId() {
   return randomUUID();
@@ -57,8 +58,17 @@ export async function createSurvey(
     try {
       await withTransaction(async (tx) => {
         await tx.query(
-          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true, creatorId ?? null]
+          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name, creator_id, theme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            id,
+            draft.title,
+            draft.description ?? "",
+            adminToken,
+            createdAt,
+            draft.collectName === true,
+            creatorId ?? null,
+            draft.theme ?? DEFAULT_THEME,
+          ]
         );
         let position = 0;
         for (const q of draft.questions) {
@@ -87,7 +97,8 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     description: string;
     created_at: string;
     collect_name: boolean;
-  }>(`SELECT id, title, description, created_at, collect_name FROM surveys WHERE id = $1`, [id]);
+    theme: string;
+  }>(`SELECT id, title, description, created_at, collect_name, theme FROM surveys WHERE id = $1`, [id]);
   const surveyRow = surveyRows[0];
   if (!surveyRow) return null;
 
@@ -101,6 +112,7 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     title: surveyRow.title,
     description: surveyRow.description,
     collectName: !!surveyRow.collect_name,
+    theme: (surveyRow.theme as ThemeId) || DEFAULT_THEME,
     createdAt: surveyRow.created_at,
     questions: questionRows.map(rowToQuestion),
   };

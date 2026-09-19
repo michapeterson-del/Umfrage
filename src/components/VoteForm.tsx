@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { AnswerInput, Question, Survey } from "@/lib/types";
+import { themeStyle } from "@/lib/themeStyle";
+import SurveyThemeBanner from "./SurveyThemeBanner";
 
 type AnswerValue = string | string[] | number | undefined;
 
@@ -93,31 +95,45 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
   }
 
   if (loading) {
-    return <p className="text-center text-slate-500">Umfrage wird geladen …</p>;
+    return (
+      <div className="mx-auto max-w-xl px-4 py-12">
+        <p className="text-center text-slate-500">Umfrage wird geladen …</p>
+      </div>
+    );
   }
 
   if (loadError || !survey) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
-        {loadError ?? "Umfrage nicht gefunden."}
+      <div className="mx-auto max-w-xl px-4 py-12">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+          {loadError ?? "Umfrage nicht gefunden."}
+        </div>
       </div>
     );
   }
 
   if (submitted || alreadyVoted) {
     return (
-      <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
-        <h2 className="text-lg font-semibold text-green-900">
-          {submitted ? "Danke für deine Teilnahme! 🎉" : "Du hast bereits teilgenommen"}
-        </h2>
-        <p className="mt-2 text-sm text-green-800">
-          Deine Antwort wurde anonym gespeichert.
-        </p>
-      </div>
+      <>
+        <SurveyThemeBanner theme={survey.theme} />
+        <div className="mx-auto max-w-xl px-4 py-12" style={themeStyle(survey.theme)}>
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
+            <h2 className="text-lg font-semibold text-green-900">
+              {submitted ? "Danke für deine Teilnahme! 🎉" : "Du hast bereits teilgenommen"}
+            </h2>
+            <p className="mt-2 text-sm text-green-800">
+              Deine Antwort wurde anonym gespeichert.
+            </p>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
+    <>
+    <SurveyThemeBanner theme={survey.theme} />
+    <div className="mx-auto max-w-xl px-4 py-12" style={themeStyle(survey.theme)}>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{survey.title}</h1>
@@ -161,6 +177,8 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
         </button>
       </form>
     </div>
+    </div>
+    </>
   );
 }
 

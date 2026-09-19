@@ -38,7 +38,8 @@ async function createSchema(): Promise<void> {
       admin_token TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL,
       collect_name BOOLEAN NOT NULL DEFAULT FALSE,
-      creator_id TEXT
+      creator_id TEXT,
+      theme TEXT NOT NULL DEFAULT 'solar'
     );
 
     CREATE TABLE IF NOT EXISTS questions (
@@ -78,6 +79,7 @@ async function createSchema(): Promise<void> {
     ALTER TABLE responses ADD COLUMN IF NOT EXISTS voter_name TEXT;
     ALTER TABLE surveys ADD COLUMN IF NOT EXISTS creator_id TEXT;
     CREATE INDEX IF NOT EXISTS idx_surveys_creator ON surveys(creator_id);
+    ALTER TABLE surveys ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'solar';
   `);
 }
 

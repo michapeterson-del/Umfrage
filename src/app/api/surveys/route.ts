@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSurvey } from "@/lib/surveys";
 import type { QuestionDraft, QuestionType, SurveyDraft } from "@/lib/types";
+import { DEFAULT_THEME, isThemeId } from "@/lib/themes";
 
 const VALID_TYPES: QuestionType[] = ["single", "multiple", "rating", "text"];
 
@@ -49,8 +50,9 @@ function validateDraft(body: unknown): { draft: SurveyDraft } | { error: string 
   }
 
   const collectName = b.collectName === true;
+  const theme = isThemeId(b.theme as string) ? (b.theme as SurveyDraft["theme"]) : DEFAULT_THEME;
 
-  return { draft: { title, description, collectName, questions } };
+  return { draft: { title, description, collectName, theme, questions } };
 }
 
 export async function POST(request: Request) {

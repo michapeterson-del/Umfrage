@@ -39,8 +39,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
   },
 };
 
-export const THEME_STORAGE_KEY = "umfrage_theme";
+export const DEFAULT_THEME: ThemeId = "solar";
 
-export function isThemeId(value: string | null): value is ThemeId {
+export function isThemeId(value: string | null | undefined): value is ThemeId {
   return !!value && value in THEMES;
 }

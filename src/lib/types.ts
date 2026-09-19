@@ -1,3 +1,5 @@
+import type { ThemeId } from "./themes";
+
 export type QuestionType = "single" | "multiple" | "rating" | "text";
 
 export interface QuestionDraft {
@@ -11,6 +13,7 @@ export interface SurveyDraft {
   title: string;
   description: string;
   collectName: boolean;
+  theme: ThemeId;
   questions: QuestionDraft[];
 }
 
@@ -24,6 +27,7 @@ export interface Survey {
   title: string;
   description: string;
   collectName: boolean;
+  theme: ThemeId;
   createdAt: string;
   questions: Question[];
 }

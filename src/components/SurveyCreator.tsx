@@ -10,6 +10,8 @@ import {
   SURVEYS_CHANGED_EVENT,
   type SavedSurvey,
 } from "@/lib/creatorStorage";
+import { DEFAULT_THEME, THEMES } from "@/lib/themes";
+import { themeStyle } from "@/lib/themeStyle";
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   single: "Einzelauswahl",
@@ -303,7 +305,7 @@ export default function SurveyCreator() {
     const voteLink = `${origin}/u/${published.id}`;
     const resultsLink = `${origin}/u/${published.id}/ergebnisse?token=${published.adminToken}`;
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6" style={themeStyle(draft?.theme ?? DEFAULT_THEME)}>
         <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
           <h2 className="text-lg font-semibold text-green-900">Umfrage veröffentlicht 🎉</h2>
           <p className="mt-1 text-sm text-green-800">
@@ -359,7 +361,7 @@ export default function SurveyCreator() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto max-w-2xl space-y-8" style={themeStyle(draft?.theme ?? DEFAULT_THEME)}>
       {!draft && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <label className="block text-sm font-medium text-slate-700">
@@ -432,6 +434,34 @@ export default function SurveyCreator() {
                 </span>
               </span>
             </label>
+            <div>
+              <span className="block text-sm font-medium text-slate-700">Marke dieser Umfrage</span>
+              <p className="text-xs text-slate-400">
+                Legt Farbe und Logo fest, die Teilnehmende auf der Umfrage- und du auf der Ergebnisseite
+                sehen — bleibt für alle fest, niemand kann das ändern.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.values(THEMES).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, theme: t.id })}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                      draft.theme === t.id
+                        ? "border-slate-800 bg-slate-800 text-white"
+                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: t.accent }}
+                      aria-hidden
+                    />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3">

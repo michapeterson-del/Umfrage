@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { QuestionResult, SurveyResults } from "@/lib/types";
+import { themeStyle } from "@/lib/themeStyle";
+import SurveyThemeBanner from "./SurveyThemeBanner";
 
 function Bar({
   label,
@@ -109,12 +111,20 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
     };
   }, [surveyId, token]);
 
-  if (loading) return <p className="text-center text-slate-500">Ergebnisse werden geladen …</p>;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <p className="text-center text-slate-500">Ergebnisse werden geladen …</p>
+      </div>
+    );
+  }
 
   if (error || !data) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
-        {error ?? "Ergebnisse nicht verfügbar."}
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
+          {error ?? "Ergebnisse nicht verfügbar."}
+        </div>
       </div>
     );
   }
@@ -123,6 +133,9 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
     typeof window !== "undefined" ? `${window.location.origin}/u/${surveyId}` : `/u/${surveyId}`;
 
   return (
+    <>
+    <SurveyThemeBanner theme={data.survey.theme} />
+    <div className="mx-auto max-w-3xl px-4 py-12" style={themeStyle(data.survey.theme)}>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -161,5 +174,7 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
         ))}
       </div>
     </div>
+    </div>
+    </>
   );
 }
