@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { QuestionDraft, QuestionType, SurveyDraft } from "@/lib/types";
-
-interface SavedSurvey {
-  id: string;
-  title: string;
-  adminToken: string;
-  createdAt: string;
-}
+import {
+  getOrCreateCreatorId,
+  loadSavedSurveys,
+  removeSurveyFromStorage,
+  saveSurveyToStorage,
+  SURVEYS_CHANGED_EVENT,
+  type SavedSurvey,
+} from "@/lib/creatorStorage";
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   single: "Einzelauswahl",
@@ -16,54 +17,6 @@ const TYPE_LABELS: Record<QuestionType, string> = {
   rating: "Bewertung (1–5)",
   text: "Freitext",
 };
-
-const STORAGE_KEY = "umfrage_meine_umfragen";
-
-function loadSavedSurveys(): SavedSurvey[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as SavedSurvey[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveSurveyToStorage(entry: SavedSurvey) {
-  const list = loadSavedSurveys();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...list]));
-}
-
-function removeSurveyFromStorage(id: string) {
-  const list = loadSavedSurveys().filter((s) => s.id !== id);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
-function mergeSurveysIntoStorage(entries: SavedSurvey[]) {
-  const existing = loadSavedSurveys();
-  const byId = new Map(existing.map((s) => [s.id, s]));
-  for (const entry of entries) byId.set(entry.id, entry);
-  const merged = Array.from(byId.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-}
-
-const CREATOR_ID_KEY = "umfrage_ersteller_id";
-
-function getOrCreateCreatorId(): string {
-  if (typeof window === "undefined") return "";
-  let id = window.localStorage.getItem(CREATOR_ID_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    window.localStorage.setItem(CREATOR_ID_KEY, id);
-  }
-  return id;
-}
-
-function setCreatorId(id: string) {
-  window.localStorage.setItem(CREATOR_ID_KEY, id);
-}
 
 function emptyQuestion(): QuestionDraft {
   return { type: "text", text: "", required: true };
@@ -106,78 +59,6 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint?
           {copied ? "Kopiert ✓" : "Kopieren"}
         </button>
       </div>
-    </div>
-  );
-}
-
-function CreatorIdBar({
-  creatorId,
-  restoreInput,
-  onRestoreInputChange,
-  onRestore,
-  restoring,
-  restoreMessage,
-}: {
-  creatorId: string;
-  restoreInput: string;
-  onRestoreInputChange: (v: string) => void;
-  onRestore: () => void;
-  restoring: boolean;
-  restoreMessage: string | null;
-}) {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <div className="mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <span className="text-slate-500">Deine Ersteller-ID: </span>
-          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{creatorId}</code>
-          <span className="ml-2 text-xs text-slate-400">
-            (sichere sie dir — damit findest du all deine Umfragen auf jedem Gerät wieder)
-          </span>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={async () => {
-              await navigator.clipboard.writeText(creatorId);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          >
-            {copied ? "Kopiert ✓" : "Kopieren"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          >
-            ID eingeben
-          </button>
-        </div>
-      </div>
-      {open && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <input
-            value={restoreInput}
-            onChange={(e) => onRestoreInputChange(e.target.value)}
-            placeholder="Ersteller-ID von einem anderen Gerät einfügen"
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            onClick={onRestore}
-            disabled={restoring}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-60"
-          >
-            {restoring ? "Lädt …" : "Umfragen wiederherstellen"}
-          </button>
-        </div>
-      )}
-      {restoreMessage && <p className="mt-2 text-xs text-slate-500">{restoreMessage}</p>}
     </div>
   );
 }
@@ -269,7 +150,7 @@ function QuestionEditor({
                 options: [...(question.options ?? []), `Option ${(question.options?.length ?? 0) + 1}`],
               })
             }
-            className="text-sm font-medium text-green-600 hover:text-green-800"
+            className="text-sm font-medium text-[var(--accent)] hover:opacity-80"
           >
             + Option hinzufügen
           </button>
@@ -299,49 +180,19 @@ export default function SurveyCreator() {
   const [savedSurveys, setSavedSurveys] = useState<SavedSurvey[]>([]);
   const [origin, setOrigin] = useState("");
   const [creatorId, setCreatorIdState] = useState("");
-  const [restoreInput, setRestoreInput] = useState("");
-  const [restoring, setRestoring] = useState(false);
-  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only read of browser APIs unavailable during SSR
     setSavedSurveys(loadSavedSurveys());
     setOrigin(window.location.origin);
     setCreatorIdState(getOrCreateCreatorId());
-  }, []);
 
-  async function handleRestore() {
-    const id = restoreInput.trim();
-    setRestoreMessage(null);
-    if (!id) {
-      setRestoreMessage("Bitte gib deine Ersteller-ID ein.");
-      return;
-    }
-    setRestoring(true);
-    try {
-      const res = await fetch(`/api/creator/${encodeURIComponent(id)}/surveys`);
-      const data = await res.json();
-      if (!res.ok) {
-        setRestoreMessage(data.error ?? "Wiederherstellen fehlgeschlagen.");
-        return;
-      }
-      const surveys = (data.surveys ?? []) as SavedSurvey[];
-      if (surveys.length === 0) {
-        setRestoreMessage("Zu dieser ID wurden keine Umfragen gefunden.");
-        return;
-      }
-      mergeSurveysIntoStorage(surveys);
-      setCreatorId(id);
-      setCreatorIdState(id);
+    function handleChanged() {
       setSavedSurveys(loadSavedSurveys());
-      setRestoreInput("");
-      setRestoreMessage(`${surveys.length} Umfrage(n) wiederhergestellt.`);
-    } catch {
-      setRestoreMessage("Verbindung fehlgeschlagen. Bitte erneut versuchen.");
-    } finally {
-      setRestoring(false);
     }
-  }
+    window.addEventListener(SURVEYS_CHANGED_EVENT, handleChanged);
+    return () => window.removeEventListener(SURVEYS_CHANGED_EVENT, handleChanged);
+  }, []);
 
   async function handleGenerate() {
     setError(null);
@@ -426,14 +277,12 @@ export default function SurveyCreator() {
         setError(data.error ?? "Veröffentlichen fehlgeschlagen.");
         return;
       }
-      const entry: SavedSurvey = {
+      saveSurveyToStorage({
         id: data.id,
         title: draft.title,
         adminToken: data.adminToken,
         createdAt: new Date().toISOString(),
-      };
-      saveSurveyToStorage(entry);
-      setSavedSurveys(loadSavedSurveys());
+      });
       setPublished({ id: data.id, adminToken: data.adminToken });
     } catch {
       setError("Verbindung fehlgeschlagen. Bitte erneut versuchen.");
@@ -454,16 +303,7 @@ export default function SurveyCreator() {
     const voteLink = `${origin}/u/${published.id}`;
     const resultsLink = `${origin}/u/${published.id}/ergebnisse?token=${published.adminToken}`;
     return (
-      <div className="mx-auto max-w-2xl">
-        <CreatorIdBar
-          creatorId={creatorId}
-          restoreInput={restoreInput}
-          onRestoreInputChange={setRestoreInput}
-          onRestore={handleRestore}
-          restoring={restoring}
-          restoreMessage={restoreMessage}
-        />
-        <div className="space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6">
         <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
           <h2 className="text-lg font-semibold text-green-900">Umfrage veröffentlicht 🎉</h2>
           <p className="mt-1 text-sm text-green-800">
@@ -482,12 +322,13 @@ export default function SurveyCreator() {
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Diese Links werden nur in diesem Browser gespeichert. Damit du sie nicht verlierst (z. B. bei
           neuem Gerät oder gelöschten Browserdaten), lade sie dir jetzt als Datei herunter und bewahre sie
-          irgendwo sicher auf (z. B. per Mail an dich selbst oder in deinen Notizen).
+          irgendwo sicher auf (z. B. per Mail an dich selbst oder in deinen Notizen). Oder nutze oben im
+          Menü „Konto“ deine Ersteller-ID.
         </div>
         <div className="flex flex-wrap gap-3">
           <a
             href={resultsLink}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
           >
             Zu den Ergebnissen
           </a>
@@ -513,22 +354,12 @@ export default function SurveyCreator() {
             Neue Umfrage erstellen
           </button>
         </div>
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <CreatorIdBar
-        creatorId={creatorId}
-        restoreInput={restoreInput}
-        onRestoreInputChange={setRestoreInput}
-        onRestore={handleRestore}
-        restoring={restoring}
-        restoreMessage={restoreMessage}
-      />
-      <div className="space-y-8">
+    <div className="mx-auto max-w-2xl space-y-8">
       {!draft && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <label className="block text-sm font-medium text-slate-700">
@@ -552,7 +383,7 @@ export default function SurveyCreator() {
             type="button"
             onClick={handleGenerate}
             disabled={loading}
-            className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+            className="mt-4 w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:opacity-60"
           >
             {loading ? "KI erstellt Umfrage …" : "Umfrage mit KI erstellen"}
           </button>
@@ -562,7 +393,7 @@ export default function SurveyCreator() {
       {draft && (
         <div className="space-y-4">
           {aiInfo && (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
               {aiInfo}
             </div>
           )}
@@ -615,7 +446,7 @@ export default function SurveyCreator() {
             <button
               type="button"
               onClick={addQuestion}
-              className="w-full rounded-xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-green-400 hover:text-green-600"
+              className="w-full rounded-xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-slate-400 hover:text-slate-700"
             >
               + Frage hinzufügen
             </button>
@@ -628,7 +459,7 @@ export default function SurveyCreator() {
               type="button"
               onClick={handlePublish}
               disabled={publishing}
-              className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+              className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:opacity-60"
             >
               {publishing ? "Wird veröffentlicht …" : "Umfrage veröffentlichen"}
             </button>
@@ -646,7 +477,7 @@ export default function SurveyCreator() {
       {savedSurveys.length > 0 && !draft && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-700">Meine Umfragen (auf diesem Gerät)</h2>
+            <h2 className="text-sm font-semibold text-slate-700">Meine Umfragen</h2>
             <button
               type="button"
               onClick={() =>
@@ -663,7 +494,7 @@ export default function SurveyCreator() {
                     .join("\n---\n\n")
                 )
               }
-              className="shrink-0 text-xs font-medium text-green-600 hover:text-green-800"
+              className="shrink-0 text-xs font-medium text-[var(--accent)] hover:opacity-80"
             >
               Alle als Textdatei sichern
             </button>
@@ -692,10 +523,7 @@ export default function SurveyCreator() {
                   </a>
                   <button
                     type="button"
-                    onClick={() => {
-                      removeSurveyFromStorage(s.id);
-                      setSavedSurveys(loadSavedSurveys());
-                    }}
+                    onClick={() => removeSurveyFromStorage(s.id)}
                     className="rounded-lg px-2 py-1.5 text-xs text-slate-400 hover:text-red-600"
                     aria-label="Aus Liste entfernen"
                   >
@@ -707,7 +535,6 @@ export default function SurveyCreator() {
           </ul>
         </div>
       )}
-      </div>
     </div>
   );
 }
