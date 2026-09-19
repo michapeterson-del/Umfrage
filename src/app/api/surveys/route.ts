@@ -66,6 +66,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  const { id, adminToken } = await createSurvey(result.draft);
+  const rawCreatorId = (body as Record<string, unknown>).creatorId;
+  const creatorId =
+    typeof rawCreatorId === "string" && rawCreatorId.trim().length > 0
+      ? rawCreatorId.trim().slice(0, 100)
+      : undefined;
+
+  const { id, adminToken } = await createSurvey(result.draft, creatorId);
   return NextResponse.json({ id, adminToken });
 }

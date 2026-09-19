@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { QuestionResult, SurveyResults } from "@/lib/types";
 
-function Bar({ label, count, total, color = "bg-indigo-600" }: { label: string; count: number; total: number; color?: string }) {
+function Bar({ label, count, total, color = "bg-green-600" }: { label: string; count: number; total: number; color?: string }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
     <div>
@@ -39,7 +39,7 @@ function QuestionResultCard({ result }: { result: QuestionResult }) {
 
       {result.ratingDistribution && (
         <div className="mt-4 space-y-3">
-          <div className="text-2xl font-bold text-indigo-700">
+          <div className="text-2xl font-bold text-green-700">
             {(result.ratingAverage ?? 0).toFixed(2)}{" "}
             <span className="text-sm font-normal text-slate-400">/ 5 Durchschnitt</span>
           </div>
@@ -140,7 +140,7 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
 
       <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500">
         Umfrage-Link zum Teilen:{" "}
-        <a href={voteLink} className="text-indigo-600 hover:underline">
+        <a href={voteLink} className="text-green-600 hover:underline">
           {voteLink}
         </a>
       </div>

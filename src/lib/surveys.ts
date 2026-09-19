@@ -44,7 +44,10 @@ function rowToQuestion(row: QuestionRow): Question {
   };
 }
 
-export async function createSurvey(draft: SurveyDraft): Promise<{ id: string; adminToken: string }> {
+export async function createSurvey(
+  draft: SurveyDraft,
+  creatorId?: string
+): Promise<{ id: string; adminToken: string }> {
   const adminToken = newToken();
   const createdAt = new Date().toISOString();
 
@@ -54,8 +57,8 @@ export async function createSurvey(draft: SurveyDraft): Promise<{ id: string; ad
     try {
       await withTransaction(async (tx) => {
         await tx.query(
-          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name) VALUES ($1, $2, $3, $4, $5, $6)`,
-          [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true]
+          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [id, draft.title, draft.description ?? "", adminToken, createdAt, draft.collectName === true, creatorId ?? null]
         );
         let position = 0;
         for (const q of draft.questions) {
@@ -101,6 +104,21 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     createdAt: surveyRow.created_at,
     questions: questionRows.map(rowToQuestion),
   };
+}
+
+export interface CreatorSurveySummary {
+  id: string;
+  title: string;
+  adminToken: string;
+  createdAt: string;
+}
+
+export async function getSurveysByCreator(creatorId: string): Promise<CreatorSurveySummary[]> {
+  const rows = await query<{ id: string; title: string; admin_token: string; created_at: string }>(
+    `SELECT id, title, admin_token, created_at FROM surveys WHERE creator_id = $1 ORDER BY created_at DESC`,
+    [creatorId]
+  );
+  return rows.map((r) => ({ id: r.id, title: r.title, adminToken: r.admin_token, createdAt: r.created_at }));
 }
 
 export async function isValidAdminToken(id: string, adminToken: string): Promise<boolean> {

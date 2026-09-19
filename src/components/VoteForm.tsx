@@ -155,7 +155,7 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
         >
           {submitting ? "Wird gesendet …" : "Absenden"}
         </button>
@@ -222,8 +222,8 @@ function QuestionField({
               onClick={() => onChange(n)}
               className={`h-10 w-10 rounded-full border text-sm font-semibold ${
                 value === n
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-slate-300 text-slate-600 hover:border-indigo-400"
+                  ? "border-green-600 bg-green-600 text-white"
+                  : "border-slate-300 text-slate-600 hover:border-green-400"
               }`}
             >
               {n}
