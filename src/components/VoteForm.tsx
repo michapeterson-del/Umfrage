@@ -144,14 +144,14 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
     <SurveyThemeBanner theme={survey.theme} />
     <div className="mx-auto max-w-xl px-4 py-12" style={themeStyle(survey.theme)}>
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-slate-900">{survey.title}</h1>
           {survey.description && <p className="mt-2 text-slate-600">{survey.description}</p>}
           <p className="mt-2 text-xs text-slate-400">Diese Umfrage ist anonym.</p>
         </div>
         {survey.allowMultipleResponses && alreadyVoted && (
-          <span className="shrink-0 rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
+          <span className="inline-block rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
             ✓ Bereits geantwortet — weitere Antwort möglich
           </span>
         )}
