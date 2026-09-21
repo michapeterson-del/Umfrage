@@ -114,6 +114,14 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
   const [data, setData] = useState<SurveyResults | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedResultsLink, setCopiedResultsLink] = useState(false);
+
+  function copyResultsLink() {
+    navigator.clipboard.writeText(resultsLink).then(() => {
+      setCopiedResultsLink(true);
+      setTimeout(() => setCopiedResultsLink(false), 2000);
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +166,10 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
 
   const voteLink =
     typeof window !== "undefined" ? `${window.location.origin}/u/${surveyId}` : `/u/${surveyId}`;
+  const resultsLink =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/u/${surveyId}/ergebnisse?token=${encodeURIComponent(token)}`
+      : `/u/${surveyId}/ergebnisse?token=${encodeURIComponent(token)}`;
 
   return (
     <>
@@ -193,6 +205,21 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
         <a href={voteLink} className="text-[var(--accent)] hover:underline">
           {voteLink}
         </a>
+      </div>
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="break-all">
+            Ergebnis-Link (privat, nicht teilen!): {resultsLink}
+          </span>
+          <button
+            type="button"
+            onClick={copyResultsLink}
+            className="shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+          >
+            {copiedResultsLink ? "Kopiert!" : "Kopieren"}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
