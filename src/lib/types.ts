@@ -14,6 +14,7 @@ export interface SurveyDraft {
   description: string;
   collectName: boolean;
   theme: ThemeId;
+  allowMultipleResponses: boolean;
   questions: QuestionDraft[];
 }
 
@@ -28,6 +29,7 @@ export interface Survey {
   description: string;
   collectName: boolean;
   theme: ThemeId;
+  allowMultipleResponses: boolean;
   createdAt: string;
   questions: Question[];
 }
@@ -49,8 +51,18 @@ export interface QuestionResult {
   textAnswers?: string[];
 }
 
+export interface ResponseSummary {
+  id: string;
+  createdAt: string;
+  voterName: string | null;
+  answers: Record<string, string | string[] | number>;
+}
+
 export interface SurveyResults {
   survey: Survey;
   totalResponses: number;
   questionResults: QuestionResult[];
+  // Only present when the survey collects names — one entry per response,
+  // so a name can be tied to that person's individual answers.
+  responses?: ResponseSummary[];
 }

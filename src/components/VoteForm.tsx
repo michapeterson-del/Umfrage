@@ -17,6 +17,7 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [justSavedAgain, setJustSavedAgain] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,7 +87,15 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
         setSubmitError(data.error ?? "Absenden fehlgeschlagen.");
         return;
       }
-      setSubmitted(true);
+      if (survey.allowMultipleResponses) {
+        setAlreadyVoted(true);
+        setAnswers({});
+        setName("");
+        setJustSavedAgain(true);
+        setTimeout(() => setJustSavedAgain(false), 4000);
+      } else {
+        setSubmitted(true);
+      }
     } catch {
       setSubmitError("Verbindung fehlgeschlagen. Bitte erneut versuchen.");
     } finally {
@@ -112,7 +121,7 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
     );
   }
 
-  if (submitted || alreadyVoted) {
+  if ((submitted || alreadyVoted) && !survey.allowMultipleResponses) {
     return (
       <>
         <SurveyThemeBanner theme={survey.theme} />
@@ -135,11 +144,24 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
     <SurveyThemeBanner theme={survey.theme} />
     <div className="mx-auto max-w-xl px-4 py-12" style={themeStyle(survey.theme)}>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{survey.title}</h1>
-        {survey.description && <p className="mt-2 text-slate-600">{survey.description}</p>}
-        <p className="mt-2 text-xs text-slate-400">Diese Umfrage ist anonym.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{survey.title}</h1>
+          {survey.description && <p className="mt-2 text-slate-600">{survey.description}</p>}
+          <p className="mt-2 text-xs text-slate-400">Diese Umfrage ist anonym.</p>
+        </div>
+        {survey.allowMultipleResponses && alreadyVoted && (
+          <span className="shrink-0 rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
+            ✓ Bereits geantwortet — weitere Antwort möglich
+          </span>
+        )}
       </div>
+
+      {justSavedAgain && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+          Danke, deine Antwort wurde gespeichert. Du kannst gerne noch eine weitere abgeben.
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {survey.collectName && (

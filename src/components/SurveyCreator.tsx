@@ -436,6 +436,56 @@ export default function SurveyCreator() {
               </span>
             </label>
             <div>
+              <span className="block text-sm font-medium text-slate-700">Antwortmodus</span>
+              <p className="text-xs text-slate-400">
+                Legt fest, wie oft eine Person antworten darf.
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <label
+                  className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
+                    !draft.allowMultipleResponses
+                      ? "border-slate-800 bg-slate-50"
+                      : "border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="responseMode"
+                    checked={!draft.allowMultipleResponses}
+                    onChange={() => setDraft({ ...draft, allowMultipleResponses: false })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium text-slate-700">Einmalige Umfrage</span>
+                    <span className="block text-xs text-slate-400">
+                      Jede Person kann nur einmal antworten.
+                    </span>
+                  </span>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
+                    draft.allowMultipleResponses
+                      ? "border-slate-800 bg-slate-50"
+                      : "border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="responseMode"
+                    checked={draft.allowMultipleResponses}
+                    onChange={() => setDraft({ ...draft, allowMultipleResponses: true })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium text-slate-700">Fragerunde</span>
+                    <span className="block text-xs text-slate-400">
+                      Eine Person kann mehrfach antworten (z. B. laufende Ideensammlung).
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div>
               <span className="block text-sm font-medium text-slate-700">Marke dieser Umfrage</span>
               <p className="text-xs text-slate-400">
                 Legt Farbe und Logo fest, die Teilnehmende auf der Umfrage- und du auf der Ergebnisseite

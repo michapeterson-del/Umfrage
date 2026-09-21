@@ -100,6 +100,7 @@ function heuristicFallback(input: string): SurveyDraft {
     description: "",
     collectName: false,
     theme: DEFAULT_THEME,
+    allowMultipleResponses: false,
     questions,
   };
 }
@@ -142,6 +143,7 @@ function normalizeDraft(raw: {
     description: (raw.description ?? "").trim(),
     collectName: false,
     theme: DEFAULT_THEME,
+    allowMultipleResponses: false,
     questions: questions.length > 0 ? questions : heuristicFallback(raw.title ?? "").questions,
   };
 }

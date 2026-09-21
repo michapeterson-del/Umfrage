@@ -39,7 +39,8 @@ async function createSchema(): Promise<void> {
       created_at TEXT NOT NULL,
       collect_name BOOLEAN NOT NULL DEFAULT FALSE,
       creator_id TEXT,
-      theme TEXT NOT NULL DEFAULT 'solar'
+      theme TEXT NOT NULL DEFAULT 'solar',
+      allow_multiple_responses BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS questions (
@@ -70,7 +71,6 @@ async function createSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_questions_survey ON questions(survey_id);
     CREATE INDEX IF NOT EXISTS idx_responses_survey ON responses(survey_id);
     CREATE INDEX IF NOT EXISTS idx_answers_response ON answers(response_id);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_survey_voter ON responses(survey_id, voter_token);
 
     -- Migrations for columns added after the initial deployment: CREATE TABLE
     -- above only applies to a brand-new database, so already-existing tables
@@ -80,6 +80,12 @@ async function createSchema(): Promise<void> {
     ALTER TABLE surveys ADD COLUMN IF NOT EXISTS creator_id TEXT;
     CREATE INDEX IF NOT EXISTS idx_surveys_creator ON surveys(creator_id);
     ALTER TABLE surveys ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'solar';
+    ALTER TABLE surveys ADD COLUMN IF NOT EXISTS allow_multiple_responses BOOLEAN NOT NULL DEFAULT FALSE;
+    -- "Fragerunde" surveys need multiple rows per voter_token, so the old
+    -- one-response-per-voter constraint can no longer live at the DB level —
+    -- it's now enforced in the application layer (see responses route) only
+    -- for surveys that don't allow multiple responses.
+    DROP INDEX IF EXISTS idx_responses_survey_voter;
   `);
 }
 

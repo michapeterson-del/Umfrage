@@ -51,8 +51,9 @@ function validateDraft(body: unknown): { draft: SurveyDraft } | { error: string 
 
   const collectName = b.collectName === true;
   const theme = isThemeId(b.theme as string) ? (b.theme as SurveyDraft["theme"]) : DEFAULT_THEME;
+  const allowMultipleResponses = b.allowMultipleResponses === true;
 
-  return { draft: { title, description, collectName, theme, questions } };
+  return { draft: { title, description, collectName, theme, allowMultipleResponses, questions } };
 }
 
 export async function POST(request: Request) {

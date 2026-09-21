@@ -5,6 +5,7 @@ import type {
   AnswerInput,
   Question,
   QuestionResult,
+  ResponseSummary,
   Survey,
   SurveyDraft,
   SurveyResults,
@@ -58,7 +59,7 @@ export async function createSurvey(
     try {
       await withTransaction(async (tx) => {
         await tx.query(
-          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name, creator_id, theme) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `INSERT INTO surveys (id, title, description, admin_token, created_at, collect_name, creator_id, theme, allow_multiple_responses) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             id,
             draft.title,
@@ -68,6 +69,7 @@ export async function createSurvey(
             draft.collectName === true,
             creatorId ?? null,
             draft.theme ?? DEFAULT_THEME,
+            draft.allowMultipleResponses === true,
           ]
         );
         let position = 0;
@@ -98,7 +100,11 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     created_at: string;
     collect_name: boolean;
     theme: string;
-  }>(`SELECT id, title, description, created_at, collect_name, theme FROM surveys WHERE id = $1`, [id]);
+    allow_multiple_responses: boolean;
+  }>(
+    `SELECT id, title, description, created_at, collect_name, theme, allow_multiple_responses FROM surveys WHERE id = $1`,
+    [id]
+  );
   const surveyRow = surveyRows[0];
   if (!surveyRow) return null;
 
@@ -113,6 +119,7 @@ export async function getSurvey(id: string): Promise<Survey | null> {
     description: surveyRow.description,
     collectName: !!surveyRow.collect_name,
     theme: (surveyRow.theme as ThemeId) || DEFAULT_THEME,
+    allowMultipleResponses: !!surveyRow.allow_multiple_responses,
     createdAt: surveyRow.created_at,
     questions: questionRows.map(rowToQuestion),
   };
@@ -172,29 +179,21 @@ export async function submitResponse(
 
   const responseId = newId();
 
-  try {
-    await withTransaction(async (tx) => {
-      await tx.query(
-        `INSERT INTO responses (id, survey_id, created_at, voter_token, voter_name) VALUES ($1, $2, $3, $4, $5)`,
-        [responseId, surveyId, new Date().toISOString(), voterToken, voterName?.trim() || null]
-      );
-      for (const a of answers) {
-        if (!questionById.has(a.questionId)) continue;
-        await tx.query(`INSERT INTO answers (id, response_id, question_id, value) VALUES ($1, $2, $3, $4)`, [
-          newId(),
-          responseId,
-          a.questionId,
-          JSON.stringify(a.value),
-        ]);
-      }
-    });
-  } catch (err) {
-    const code = (err as { code?: string } | undefined)?.code;
-    if (code === "23505") {
-      return { ok: false, error: "Du hast an dieser Umfrage bereits teilgenommen." };
+  await withTransaction(async (tx) => {
+    await tx.query(
+      `INSERT INTO responses (id, survey_id, created_at, voter_token, voter_name) VALUES ($1, $2, $3, $4, $5)`,
+      [responseId, surveyId, new Date().toISOString(), voterToken, voterName?.trim() || null]
+    );
+    for (const a of answers) {
+      if (!questionById.has(a.questionId)) continue;
+      await tx.query(`INSERT INTO answers (id, response_id, question_id, value) VALUES ($1, $2, $3, $4)`, [
+        newId(),
+        responseId,
+        a.questionId,
+        JSON.stringify(a.value),
+      ]);
     }
-    throw err;
-  }
+  });
 
   return { ok: true };
 }
@@ -308,4 +307,15 @@ export async function getRawResponses(surveyId: string) {
   }));
 
   return { survey, rows };
+}
+
+export async function getNamedResponses(surveyId: string): Promise<ResponseSummary[] | null> {
+  const raw = await getRawResponses(surveyId);
+  if (!raw) return null;
+  return raw.rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    voterName: r.voterName,
+    answers: Object.fromEntries(r.answers) as ResponseSummary["answers"],
+  }));
 }

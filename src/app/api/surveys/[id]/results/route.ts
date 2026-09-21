@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getResults, isValidAdminToken } from "@/lib/surveys";
+import { getNamedResponses, getResults, isValidAdminToken } from "@/lib/surveys";
 
 export async function GET(
   request: Request,
@@ -17,5 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "Umfrage nicht gefunden." }, { status: 404 });
   }
 
-  return NextResponse.json(results);
+  const responses = results.survey.collectName ? await getNamedResponses(id) : undefined;
+
+  return NextResponse.json({ ...results, responses });
 }

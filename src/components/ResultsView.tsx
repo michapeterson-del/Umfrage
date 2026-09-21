@@ -1,9 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { QuestionResult, SurveyResults } from "@/lib/types";
+import type { Question, QuestionResult, ResponseSummary, SurveyResults } from "@/lib/types";
 import { themeStyle } from "@/lib/themeStyle";
 import SurveyThemeBanner from "./SurveyThemeBanner";
+
+function formatAnswerValue(value: string | string[] | number | undefined): string {
+  if (value === undefined || value === null || value === "") return "–";
+  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "–";
+  return String(value);
+}
+
+function ResponseCard({ response, questions }: { response: ResponseSummary; questions: Question[] }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-medium text-slate-800">{response.voterName || "Anonym"}</span>
+        <span className="text-xs text-slate-400">
+          {new Date(response.createdAt).toLocaleString("de-DE")}
+        </span>
+      </div>
+      <dl className="mt-2 space-y-1.5">
+        {questions.map((q) => (
+          <div key={q.id} className="text-sm">
+            <dt className="text-slate-500">{q.text}</dt>
+            <dd className="text-slate-800">{formatAnswerValue(response.answers[q.id])}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 function Bar({
   label,
@@ -173,6 +200,20 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
           <QuestionResultCard key={qr.question.id} result={qr} />
         ))}
       </div>
+
+      {data.responses && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">Antworten nach Person</h2>
+          <div className="space-y-3">
+            {data.responses.length === 0 && (
+              <p className="text-sm text-slate-400">Noch keine Antworten.</p>
+            )}
+            {data.responses.map((r) => (
+              <ResponseCard key={r.id} response={r} questions={data.survey.questions} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
     </div>
     </>

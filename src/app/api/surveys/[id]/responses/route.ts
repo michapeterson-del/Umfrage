@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { hasVoted, submitResponse } from "@/lib/surveys";
+import { getSurvey, hasVoted, submitResponse } from "@/lib/surveys";
 import { getOrCreateVoterToken } from "@/lib/voter";
 import type { AnswerInput } from "@/lib/types";
 
@@ -31,9 +31,14 @@ export async function POST(
     answers.push({ questionId: r.questionId, value });
   }
 
+  const survey = await getSurvey(id);
+  if (!survey) {
+    return NextResponse.json({ error: "Umfrage nicht gefunden." }, { status: 404 });
+  }
+
   const { token } = await getOrCreateVoterToken(id);
 
-  if (await hasVoted(id, token)) {
+  if (!survey.allowMultipleResponses && (await hasVoted(id, token))) {
     return NextResponse.json(
       { error: "Du hast an dieser Umfrage bereits teilgenommen." },
       { status: 409 }
