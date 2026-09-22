@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Question, QuestionResult, ResponseSummary, SurveyResults } from "@/lib/types";
 import { themeStyle } from "@/lib/themeStyle";
 import SurveyThemeBanner from "./SurveyThemeBanner";
+import QrCode from "./QrCode";
 
 function formatAnswerValue(value: string | string[] | number | undefined): string {
   if (value === undefined || value === null || value === "") return "–";
@@ -200,11 +201,14 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500">
-        Umfrage-Link zum Teilen:{" "}
-        <a href={voteLink} className="text-[var(--accent)] hover:underline">
-          {voteLink}
-        </a>
+      <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-slate-500">
+          Umfrage-Link zum Teilen:{" "}
+          <a href={voteLink} className="text-[var(--accent)] hover:underline">
+            {voteLink}
+          </a>
+        </div>
+        <QrCode value={voteLink} size={120} filename={`umfrage-qr-${surveyId}.png`} />
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">

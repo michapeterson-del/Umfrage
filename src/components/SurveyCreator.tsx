@@ -13,6 +13,7 @@ import {
 } from "@/lib/creatorStorage";
 import { DEFAULT_THEME, THEMES } from "@/lib/themes";
 import { themeStyle } from "@/lib/themeStyle";
+import QrCode from "./QrCode";
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   single: "Einzelauswahl",
@@ -314,13 +315,18 @@ export default function SurveyCreator() {
             Auswertung sehen.
           </p>
         </div>
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <CopyField label="Umfrage-Link (zum Teilen)" value={voteLink} />
-          <CopyField
-            label="Ergebnis-Link (privat, nicht teilen!)"
-            value={resultsLink}
-            hint="Nur mit diesem Link siehst du die Auswertung und kannst Excel/PDF herunterladen."
-          />
+        <div className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-start">
+          <div className="flex-1 space-y-4">
+            <CopyField label="Umfrage-Link (zum Teilen)" value={voteLink} />
+            <CopyField
+              label="Ergebnis-Link (privat, nicht teilen!)"
+              value={resultsLink}
+              hint="Nur mit diesem Link siehst du die Auswertung und kannst Excel/PDF herunterladen."
+            />
+          </div>
+          <div className="mx-auto sm:mx-0">
+            <QrCode value={voteLink} filename={`umfrage-qr-${published.id}.png`} />
+          </div>
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Diese Links werden nur in diesem Browser gespeichert. Damit du sie nicht verlierst (z. B. bei
