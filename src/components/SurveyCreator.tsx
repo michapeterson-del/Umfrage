@@ -609,7 +609,11 @@ export default function SurveyCreator() {
                   </a>
                   <button
                     type="button"
-                    onClick={() => removeSurveyFromStorage(s.id)}
+                    onClick={() => {
+                      if (window.confirm(`„${s.title}“ wirklich aus der Liste löschen?`)) {
+                        removeSurveyFromStorage(s.id);
+                      }
+                    }}
                     className="rounded-lg px-2 py-1.5 text-xs text-slate-400 hover:text-red-600"
                     aria-label="Aus Liste entfernen"
                   >
