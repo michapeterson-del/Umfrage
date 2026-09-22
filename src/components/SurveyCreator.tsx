@@ -396,6 +396,29 @@ export default function SurveyCreator() {
           >
             {loading ? "KI erstellt Umfrage …" : "Umfrage mit KI erstellen"}
           </button>
+          <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
+            <div className="h-px flex-1 bg-slate-200" />
+            oder
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setAiInfo(null);
+              setDraft({
+                title: "",
+                description: "",
+                collectName: false,
+                theme: DEFAULT_THEME,
+                allowMultipleResponses: false,
+                questions: [emptyQuestion()],
+              });
+            }}
+            className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Umfrage manuell erstellen (ohne KI)
+          </button>
         </div>
       )}
 
