@@ -148,7 +148,11 @@ export default function VoteForm({ surveyId }: { surveyId: string }) {
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-slate-900">{survey.title}</h1>
           {survey.description && <p className="mt-2 text-slate-600">{survey.description}</p>}
-          <p className="mt-2 text-xs text-slate-400">Diese Umfrage ist anonym.</p>
+          <p className="mt-2 text-xs text-slate-400">
+            {survey.collectName
+              ? "Die Namensangabe ist freiwillig — ohne Namen bleibt deine Antwort anonym."
+              : "Diese Umfrage ist anonym."}
+          </p>
         </div>
         {survey.allowMultipleResponses && alreadyVoted && (
           <span className="inline-block rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
