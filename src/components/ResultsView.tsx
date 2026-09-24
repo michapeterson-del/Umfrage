@@ -174,7 +174,7 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
 
   return (
     <>
-    <SurveyThemeBanner theme={data.survey.theme} />
+    <SurveyThemeBanner theme={data.survey.theme} showBackLink />
     <div className="mx-auto max-w-3xl px-4 py-12" style={themeStyle(data.survey.theme)}>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
