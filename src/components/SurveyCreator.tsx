@@ -325,7 +325,11 @@ export default function SurveyCreator() {
             />
           </div>
           <div className="mx-auto sm:mx-0">
-            <QrCode value={voteLink} filename={`umfrage-qr-${published.id}.png`} />
+            <QrCode
+              value={voteLink}
+              title={draft?.title ?? ""}
+              filename={`umfrage-qr-${published.id}.png`}
+            />
           </div>
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

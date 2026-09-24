@@ -208,7 +208,12 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
             {voteLink}
           </a>
         </div>
-        <QrCode value={voteLink} size={120} filename={`umfrage-qr-${surveyId}.png`} />
+        <QrCode
+          value={voteLink}
+          title={data.survey.title}
+          size={120}
+          filename={`umfrage-qr-${surveyId}.png`}
+        />
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
