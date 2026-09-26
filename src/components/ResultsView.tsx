@@ -185,7 +185,13 @@ export default function ResultsView({ surveyId, token }: { surveyId: string; tok
             {data.totalResponses} Teilnehmer:in{data.totalResponses === 1 ? "" : "nen"} insgesamt
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <a
+            href={`/u/${surveyId}/bearbeiten?token=${encodeURIComponent(token)}`}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Umfrage bearbeiten
+          </a>
           <a
             href={`/api/surveys/${surveyId}/export/xlsx?token=${encodeURIComponent(token)}`}
             className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"

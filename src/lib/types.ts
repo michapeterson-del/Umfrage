@@ -23,6 +23,17 @@ export interface Question extends QuestionDraft {
   position: number;
 }
 
+// Used when editing an existing survey: each question optionally carries the
+// id of the row it came from, so the server can update matching questions in
+// place (keeping their answers) instead of deleting and recreating them.
+export interface QuestionEditDraft extends QuestionDraft {
+  id?: string;
+}
+
+export interface SurveyEditDraft extends Omit<SurveyDraft, "questions"> {
+  questions: QuestionEditDraft[];
+}
+
 export interface Survey {
   id: string;
   title: string;

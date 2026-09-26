@@ -15,14 +15,14 @@ import { DEFAULT_THEME, THEMES } from "@/lib/themes";
 import { themeStyle } from "@/lib/themeStyle";
 import QrCode from "./QrCode";
 
-const TYPE_LABELS: Record<QuestionType, string> = {
+export const TYPE_LABELS: Record<QuestionType, string> = {
   single: "Einzelauswahl",
   multiple: "Mehrfachauswahl",
   rating: "Bewertung (1–5)",
   text: "Freitext",
 };
 
-function emptyQuestion(): QuestionDraft {
+export function emptyQuestion(): QuestionDraft {
   return { type: "text", text: "", required: true };
 }
 
@@ -67,13 +67,13 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint?
   );
 }
 
-function QuestionEditor({
+export function QuestionEditor<T extends QuestionDraft>({
   question,
   onChange,
   onDelete,
 }: {
-  question: QuestionDraft;
-  onChange: (q: QuestionDraft) => void;
+  question: T;
+  onChange: (q: T) => void;
   onDelete: () => void;
 }) {
   const needsOptions = question.type === "single" || question.type === "multiple";
@@ -639,6 +639,12 @@ export default function SurveyCreator() {
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Umfrage
+                  </a>
+                  <a
+                    href={`/u/${s.id}/bearbeiten?token=${s.adminToken}`}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Bearbeiten
                   </a>
                   <button
                     type="button"

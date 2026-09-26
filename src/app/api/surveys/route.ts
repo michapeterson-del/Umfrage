@@ -5,7 +5,7 @@ import { DEFAULT_THEME, isThemeId } from "@/lib/themes";
 
 const VALID_TYPES: QuestionType[] = ["single", "multiple", "rating", "text"];
 
-function validateDraft(body: unknown): { draft: SurveyDraft } | { error: string } {
+export function validateDraft(body: unknown): { draft: SurveyDraft } | { error: string } {
   if (typeof body !== "object" || body === null) return { error: "Ungültige Anfrage." };
   const b = body as Record<string, unknown>;
 

@@ -8,6 +8,7 @@ import type {
   ResponseSummary,
   Survey,
   SurveyDraft,
+  SurveyEditDraft,
   SurveyResults,
 } from "./types";
 import { DEFAULT_THEME, type ThemeId } from "./themes";
@@ -90,6 +91,61 @@ export async function createSurvey(
     }
   }
   throw new Error("Umfrage konnte nicht erstellt werden (ID-Kollision).");
+}
+
+export async function updateSurvey(
+  id: string,
+  adminToken: string,
+  draft: SurveyEditDraft
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const valid = await isValidAdminToken(id, adminToken);
+  if (!valid) return { ok: false, error: "Kein Zugriff." };
+
+  const existingRows = await query<{ id: string }>(`SELECT id FROM questions WHERE survey_id = $1`, [id]);
+  const existingIds = new Set(existingRows.map((r) => r.id));
+  const keptIds = new Set(draft.questions.map((q) => q.id).filter((qid): qid is string => !!qid && existingIds.has(qid)));
+  const removedIds = [...existingIds].filter((qid) => !keptIds.has(qid));
+
+  await withTransaction(async (tx) => {
+    await tx.query(
+      `UPDATE surveys SET title = $2, description = $3, collect_name = $4, theme = $5, allow_multiple_responses = $6 WHERE id = $1`,
+      [
+        id,
+        draft.title,
+        draft.description ?? "",
+        draft.collectName === true,
+        draft.theme ?? DEFAULT_THEME,
+        draft.allowMultipleResponses === true,
+      ]
+    );
+
+    // Removed questions cascade-delete their answers too — the survey no
+    // longer asks them, so those answers no longer mean anything. Questions
+    // kept by id are updated in place instead of recreated, so their
+    // existing answers stay intact.
+    for (const qid of removedIds) {
+      await tx.query(`DELETE FROM questions WHERE id = $1`, [qid]);
+    }
+
+    let position = 0;
+    for (const q of draft.questions) {
+      const optionsJson = q.options ? JSON.stringify(q.options) : null;
+      if (q.id && keptIds.has(q.id)) {
+        await tx.query(
+          `UPDATE questions SET position = $2, type = $3, text = $4, options = $5, required = $6 WHERE id = $1`,
+          [q.id, position, q.type, q.text, optionsJson, q.required]
+        );
+      } else {
+        await tx.query(
+          `INSERT INTO questions (id, survey_id, position, type, text, options, required) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [newId(), id, position, q.type, q.text, optionsJson, q.required]
+        );
+      }
+      position += 1;
+    }
+  });
+
+  return { ok: true };
 }
 
 export async function getSurvey(id: string): Promise<Survey | null> {
