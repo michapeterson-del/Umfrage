@@ -146,6 +146,11 @@ function renderPdf(doc: PDFKit.PDFDocument, results: SurveyResults) {
         doc.rect(50, barY, barMaxWidth, 10).stroke("#ddd");
         doc.rect(50, barY, Math.max(2, barMaxWidth * pct), 10).fill("#4f46e5");
         doc.fillColor("black").fontSize(9).text(`${count} (${Math.round(pct * 100)}%)`, 50 + barMaxWidth + 10, barY - 1);
+        // .text() with an explicit x/y leaves the cursor there instead of
+        // back at the left margin — without resetting doc.x, every following
+        // unpositioned .text() call (next bar's label, next question's
+        // title) starts from this offset and overlaps or runs off the page.
+        doc.x = 50;
         doc.y = barY + 16;
         void y;
       }
@@ -157,11 +162,14 @@ function renderPdf(doc: PDFKit.PDFDocument, results: SurveyResults) {
         if (doc.y > 720) doc.addPage();
         const count = qr.ratingDistribution[stars] ?? 0;
         const pct = count / total;
-        const barY = doc.y + 2;
         doc.fontSize(10).font("Helvetica").text(`${stars} Sterne`);
+        // barY is read after the label above, so the bar lands below its
+        // text instead of overlapping it (the label call moves doc.y down).
+        const barY = doc.y + 2;
         doc.rect(50, barY, barMaxWidth, 10).stroke("#ddd");
         doc.rect(50, barY, Math.max(2, barMaxWidth * pct), 10).fill("#f59e0b");
         doc.fillColor("black").fontSize(9).text(`${count} (${Math.round(pct * 100)}%)`, 50 + barMaxWidth + 10, barY - 1);
+        doc.x = 50;
         doc.y = barY + 16;
       }
     } else if (qr.textAnswers) {
