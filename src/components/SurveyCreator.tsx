@@ -71,16 +71,40 @@ export function QuestionEditor<T extends QuestionDraft>({
   question,
   onChange,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   question: T;
   onChange: (q: T) => void;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }) {
   const needsOptions = question.type === "single" || question.type === "multiple";
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start gap-3">
+        <div className="flex shrink-0 flex-col gap-0.5">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={!onMoveUp}
+            aria-label="Frage nach oben verschieben"
+            className="rounded border border-slate-200 px-1.5 py-0.5 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={!onMoveDown}
+            aria-label="Frage nach unten verschieben"
+            className="rounded border border-slate-200 px-1.5 py-0.5 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            ▼
+          </button>
+        </div>
         <input
           value={question.text}
           onChange={(e) => onChange({ ...question, text: e.target.value })}
@@ -245,6 +269,15 @@ export default function SurveyCreator() {
   function addQuestion() {
     if (!draft) return;
     setDraft({ ...draft, questions: [...draft.questions, emptyQuestion()] });
+  }
+
+  function moveQuestion(index: number, direction: -1 | 1) {
+    if (!draft) return;
+    const target = index + direction;
+    if (target < 0 || target >= draft.questions.length) return;
+    const questions = [...draft.questions];
+    [questions[index], questions[target]] = [questions[target], questions[index]];
+    setDraft({ ...draft, questions });
   }
 
   async function handlePublish() {
@@ -560,6 +593,8 @@ export default function SurveyCreator() {
                 question={q}
                 onChange={(nq) => updateQuestion(i, nq)}
                 onDelete={() => deleteQuestion(i)}
+                onMoveUp={i > 0 ? () => moveQuestion(i, -1) : undefined}
+                onMoveDown={i < draft.questions.length - 1 ? () => moveQuestion(i, 1) : undefined}
               />
             ))}
             <button

@@ -107,6 +107,15 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
     setDraft({ ...draft, questions: draft.questions.filter((_, i) => i !== index) });
   }
 
+  function moveQuestion(index: number, direction: -1 | 1) {
+    if (!draft) return;
+    const target = index + direction;
+    if (target < 0 || target >= draft.questions.length) return;
+    const questions = [...draft.questions];
+    [questions[index], questions[target]] = [questions[target], questions[index]];
+    setDraft({ ...draft, questions });
+  }
+
   function addQuestion() {
     if (!draft) return;
     setDraft({ ...draft, questions: [...draft.questions, emptyQuestion()] });
@@ -316,6 +325,8 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
                 question={q}
                 onChange={(nq) => updateQuestion(i, nq)}
                 onDelete={() => deleteQuestion(i)}
+                onMoveUp={i > 0 ? () => moveQuestion(i, -1) : undefined}
+                onMoveDown={i < draft.questions.length - 1 ? () => moveQuestion(i, 1) : undefined}
               />
             </div>
           );
