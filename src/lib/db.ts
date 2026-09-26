@@ -18,7 +18,26 @@ function createPool(): Pool {
     );
   }
 
-  return new Pool({ connectionString });
+  const pool = new Pool({
+    connectionString,
+    // Serverless functions run many separate instances in parallel, each
+    // with its own pool — a high per-instance max multiplies into far more
+    // connections than the database allows under a traffic spike, causing
+    // "connection failed" errors for some visitors. Keep each instance's
+    // pool small, and fail fast (instead of hanging) when the database
+    // can't accept a new connection right away, so a slow spike degrades
+    // to occasional retries rather than user-facing hangs.
+    max: 3,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 5_000,
+  });
+  // An idle client can emit an 'error' event (e.g. the database closing a
+  // stale connection); without a handler here Node treats it as an
+  // unhandled error and crashes the whole process.
+  pool.on("error", (err) => {
+    console.error("Unerwarteter Fehler bei einer inaktiven Datenbankverbindung:", err);
+  });
+  return pool;
 }
 
 function getPool(): Pool {
