@@ -84,33 +84,13 @@ export function QuestionEditor<T extends QuestionDraft>({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="flex shrink-0 flex-col gap-0.5">
-          <button
-            type="button"
-            onClick={onMoveUp}
-            disabled={!onMoveUp}
-            aria-label="Frage nach oben verschieben"
-            className="rounded border border-slate-200 px-1.5 py-0.5 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            ▲
-          </button>
-          <button
-            type="button"
-            onClick={onMoveDown}
-            disabled={!onMoveDown}
-            aria-label="Frage nach unten verschieben"
-            className="rounded border border-slate-200 px-1.5 py-0.5 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            ▼
-          </button>
-        </div>
-        <input
-          value={question.text}
-          onChange={(e) => onChange({ ...question, text: e.target.value })}
-          placeholder="Fragetext"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
+      <input
+        value={question.text}
+        onChange={(e) => onChange({ ...question, text: e.target.value })}
+        placeholder="Fragetext"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={question.type}
           onChange={(e) => {
@@ -126,7 +106,7 @@ export function QuestionEditor<T extends QuestionDraft>({
                 : undefined,
             });
           }}
-          className="rounded-lg border border-slate-300 px-2 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm"
         >
           {Object.entries(TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -134,6 +114,26 @@ export function QuestionEditor<T extends QuestionDraft>({
             </option>
           ))}
         </select>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={!onMoveUp}
+            aria-label="Frage nach oben verschieben"
+            className="rounded-lg border border-slate-200 px-2 py-2 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={!onMoveDown}
+            aria-label="Frage nach unten verschieben"
+            className="rounded-lg border border-slate-200 px-2 py-2 text-xs leading-none text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            ▼
+          </button>
+        </div>
         <button
           type="button"
           onClick={onDelete}
