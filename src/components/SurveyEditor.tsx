@@ -24,6 +24,7 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [answerCounts, setAnswerCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +66,27 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
     };
   }, [surveyId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    // Existing answers per question — used to warn before a delete would
+    // silently wipe them (a "deleted + re-added" question looks identical
+    // in the editor but is a new row with no answer history).
+    fetch(`/api/surveys/${surveyId}/results?token=${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const counts: Record<string, number> = {};
+        for (const qr of data.questionResults ?? []) {
+          counts[qr.question.id] = qr.totalAnswers ?? 0;
+        }
+        if (!cancelled) setAnswerCounts(counts);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [surveyId, token]);
+
   function updateQuestion(index: number, q: QuestionEditDraft) {
     if (!draft) return;
     const questions = [...draft.questions];
@@ -74,6 +96,14 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
 
   function deleteQuestion(index: number) {
     if (!draft) return;
+    const q = draft.questions[index];
+    const count = q.id ? answerCounts[q.id] ?? 0 : 0;
+    if (count > 0) {
+      const confirmed = window.confirm(
+        `Diese Frage hat bereits ${count} Antwort${count === 1 ? "" : "en"}. Beim Löschen gehen diese unwiderruflich verloren. Wirklich löschen?`
+      );
+      if (!confirmed) return;
+    }
     setDraft({ ...draft, questions: draft.questions.filter((_, i) => i !== index) });
   }
 
@@ -272,14 +302,24 @@ export default function SurveyEditor({ surveyId, token }: { surveyId: string; to
       </div>
 
       <div className="space-y-3">
-        {draft.questions.map((q, i) => (
-          <QuestionEditor
-            key={q.id ?? `new-${i}`}
-            question={q}
-            onChange={(nq) => updateQuestion(i, nq)}
-            onDelete={() => deleteQuestion(i)}
-          />
-        ))}
+        {draft.questions.map((q, i) => {
+          const count = q.id ? answerCounts[q.id] ?? 0 : 0;
+          return (
+            <div key={q.id ?? `new-${i}`}>
+              {count > 0 && (
+                <p className="mb-1 text-xs text-slate-500">
+                  {count} bisherige Antwort{count === 1 ? "" : "en"} — beim Löschen dieser Frage gehen sie
+                  verloren.
+                </p>
+              )}
+              <QuestionEditor
+                question={q}
+                onChange={(nq) => updateQuestion(i, nq)}
+                onDelete={() => deleteQuestion(i)}
+              />
+            </div>
+          );
+        })}
         <button
           type="button"
           onClick={addQuestion}
