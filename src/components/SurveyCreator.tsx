@@ -49,7 +49,7 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint?
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className="flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700"
         />
         <button
           type="button"
@@ -80,12 +80,12 @@ export function QuestionEditor<T extends QuestionDraft>({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <input
           value={question.text}
           onChange={(e) => onChange({ ...question, text: e.target.value })}
           placeholder="Fragetext"
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <select
           value={question.type}
@@ -131,7 +131,7 @@ export function QuestionEditor<T extends QuestionDraft>({
                   options[i] = e.target.value;
                   onChange({ ...question, options });
                 }}
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
               />
               <button
                 type="button"
