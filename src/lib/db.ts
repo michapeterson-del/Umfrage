@@ -105,6 +105,13 @@ async function createSchema(): Promise<void> {
     -- it's now enforced in the application layer (see responses route) only
     -- for surveys that don't allow multiple responses.
     DROP INDEX IF EXISTS idx_responses_survey_voter;
+
+    -- Tempolimit fuer die KI-Erstellung (nur gehashte IP + Zeitpunkt).
+    CREATE TABLE IF NOT EXISTS ai_requests (
+      ip_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_requests_ip_time ON ai_requests(ip_hash, created_at);
   `);
 }
 
