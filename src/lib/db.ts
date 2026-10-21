@@ -13,22 +13,20 @@ function createPool(): Pool {
 
   if (!connectionString) {
     throw new Error(
-      "Keine Datenbankverbindung konfiguriert. Bitte POSTGRES_URL (oder DATABASE_URL) setzen — " +
-        "z.B. durch Verknüpfen einer Vercel Postgres/Neon-Datenbank mit dem Projekt."
+      "Keine Datenbankverbindung konfiguriert. Bitte POSTGRES_URL (oder DATABASE_URL) in Coolify " +
+        "als Umgebungsvariable setzen — der Wert ist der Verbindungsstring der Postgres-Datenbank."
     );
   }
 
   const pool = new Pool({
     connectionString,
-    // Serverless functions run many separate instances in parallel, each
-    // with its own pool — a high per-instance max multiplies into far more
-    // connections than the database allows under a traffic spike, causing
-    // "connection failed" errors for some visitors. Keep each instance's
-    // pool small, and fail fast (instead of hanging) when the database
-    // can't accept a new connection right away, so a slow spike degrades
-    // to occasional retries rather than user-facing hangs.
-    max: 3,
-    idleTimeoutMillis: 10_000,
+    // Runs as a single long-lived server process (Coolify/Docker), not many
+    // parallel serverless instances, so one pool serves all concurrent
+    // requests — pg's own default (10) is a reasonable size. Still fail
+    // fast (instead of hanging) when the database can't accept a new
+    // connection right away, and recycle idle clients periodically.
+    max: 10,
+    idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
   });
   // An idle client can emit an 'error' event (e.g. the database closing a
